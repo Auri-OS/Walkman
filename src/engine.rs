@@ -12,6 +12,7 @@ impl Runner for QemuRunner {
         let mut p = spawn(&config.command, Some(config.timeout_ms))?;
 
         for msg in &config.boot_sequence {
+            reporter.on_boot_start(msg);
             if let Err(e) = p.exp_string(msg) {
                 reporter.on_step_failure("Boot sequence", &e.to_string());
                 anyhow::bail!(e.to_string());
