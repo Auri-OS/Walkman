@@ -8,6 +8,7 @@ use crossterm::{
 
 use crate::{config::TestConfig, traits::Reporter};
 
+#[derive(Debug, PartialEq)]
 enum Status {
     Pending,
     Running,
@@ -254,5 +255,51 @@ impl Reporter for TuiReporter {
 impl Drop for TuiReporter {
     fn drop(&mut self) {
         let _ = execute!(stdout(), cursor::Show);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{CommandTest, ShellInteractions};
+
+    fn get_mock_config() -> TestConfig {
+        TestConfig {
+            name: "Mock".to_string(),
+            command: "echo".to_string(),
+            timeout_ms: 1000,
+            boot_sequence: vec!["booting".to_string()],
+            shell_interactions: ShellInteractions {
+                prompt: "$".to_string(),
+                tests: vec![CommandTest {
+                    command: "ls".to_string(),
+                    expect: "file".to_string(),
+                }],
+            },
+        }
+    }
+
+    #[test]
+    fn test_tui_state_transitions() {
+        let config = get_mock_config();
+        let reporter = TuiReporter::new(&config);
+
+        {
+            let state = reporter.state.borrow();
+            assert_eq!(state.boot_steps[0].1, Status::Pending);
+            assert_eq!(state.shell_steps[0].1, Status::Pending);
+        }
+
+        reporter.on_boot_start("booting");
+        assert_eq!(reporter.state.borrow().boot_steps[0].1, Status::Running);
+
+        reporter.on_boot_check("booting");
+        assert_eq!(reporter.state.borrow().boot_steps[0].1, Status::Success);
+
+        reporter.on_step_failure("ls", "timeout");
+        assert_eq!(
+            reporter.state.borrow().shell_steps[0].1,
+            Status::Failed("timeout".to_string())
+        );
     }
 }
