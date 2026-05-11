@@ -3,9 +3,9 @@ use crate::traits::Reporter;
 
 pub struct ConsoleReporter;
 
-const GREEN: &str = "\x1b[34";
-const RED: &str = "\x1b[31";
-const RESET: &str = "\x1b[m";
+const GREEN: &str = "\x1b[32m";
+const RED: &str = "\x1b[31m";
+const RESET: &str = "\x1b[0m";
 
 impl Reporter for ConsoleReporter {
     fn on_test_start(&self, config: &TestConfig) {
