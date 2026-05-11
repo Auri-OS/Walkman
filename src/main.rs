@@ -1,22 +1,27 @@
-use std::{env, fs::File, process};
+use std::{fs::File, process};
 
 use walkman::{
     config::TestConfig,
     engine::QemuRunner,
-    reporter::ConsoleReporter,
-    traits::{Reporter, Runner},
+    reporter::{console::ConsoleReporter, tui::TuiReporter},
+    traits::Runner,
 };
 
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    test_file: String,
+
+    #[arg(long, default_value_t = false)]
+    nui: bool,
+}
+
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        eprintln!("Usage: walkman <path_to_test.yml>");
-        process::exit(1);
-    }
+    let cli = Cli::parse();
 
-    let file_path = &args[1];
-
-    let file = match File::open(file_path) {
+    let file = match File::open(cli.test_file) {
         Ok(f) => f,
         Err(e) => {
             eprintln!("Failed to open test file: {}", e);
@@ -32,11 +37,18 @@ fn main() {
         }
     };
 
-    let reporter = ConsoleReporter;
+    // let reporter = ConsoleReporter;
     let mut runner = QemuRunner;
 
-    if runner.run(&config, &reporter).is_err() {
-        reporter.on_test_end(false);
+    let result = if cli.nui {
+        let reporter = ConsoleReporter;
+        runner.run(&config, &reporter)
+    } else {
+        let reporter = TuiReporter::new(&config);
+        runner.run(&config, &reporter)
+    };
+
+    if result.is_err() {
         process::exit(1);
     }
 }

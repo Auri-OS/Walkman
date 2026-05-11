@@ -15,6 +15,8 @@ impl Reporter for ConsoleReporter {
         println!("--------------------------------------------------");
     }
 
+    fn on_boot_start(&self, _msg: &str) {}
+
     fn on_boot_check(&self, msg: &str) {
         println!("  [BOOT] Waiting for: '{}' ...", msg);
     }
