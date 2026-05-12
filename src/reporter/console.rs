@@ -1,11 +1,8 @@
 use crate::config::TestConfig;
 use crate::traits::Reporter;
+use crate::{GREEN, RED, RESET};
 
 pub struct ConsoleReporter;
-
-const GREEN: &str = "\x1b[32m";
-const RED: &str = "\x1b[31m";
-const RESET: &str = "\x1b[0m";
 
 impl Reporter for ConsoleReporter {
     fn on_test_start(&self, config: &TestConfig) {

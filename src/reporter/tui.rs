@@ -6,7 +6,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
-use crate::{config::TestConfig, traits::Reporter};
+use crate::{RED, RESET, config::TestConfig, traits::Reporter};
 
 #[derive(Debug, PartialEq)]
 enum Status {
@@ -151,7 +151,7 @@ impl TuiReporter {
                 let _ = execute!(
                     out,
                     SetForegroundColor(Color::DarkGrey),
-                    Print("    │ ⌨️  Sending payload...\n"),
+                    Print("    │ 📦  Sending payload...\n"),
                     Print("    │ ⏳ Waiting for OS response...\n"),
                     ResetColor
                 );
@@ -167,8 +167,7 @@ impl TuiReporter {
                 );
                 let _ = execute!(
                     out,
-                    SetForegroundColor(Color::Red),
-                    Print(format!("    │ Reason: {}\n", reason)),
+                    Print(format!("  {RED}↳ │{RESET} Reason: {}\n", reason)),
                     ResetColor
                 );
                 lines += 1;
@@ -273,7 +272,7 @@ mod tests {
                 prompt: "$".to_string(),
                 tests: vec![CommandTest {
                     command: "ls".to_string(),
-                    expect: "file".to_string(),
+                    expect: vec!["file".to_string()],
                 }],
             },
         }

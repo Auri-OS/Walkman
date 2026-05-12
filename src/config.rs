@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 #[derive(Debug, Deserialize)]
 pub struct TestConfig {
@@ -18,7 +18,25 @@ pub struct ShellInteractions {
 #[derive(Debug, Deserialize)]
 pub struct CommandTest {
     pub command: String,
-    pub expect: String,
+    #[serde(deserialize_with = "deserialize_expect")]
+    pub expect: Vec<String>,
+}
+
+fn deserialize_expect<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrVec {
+        String(String),
+        Vec(Vec<String>),
+    }
+
+    match StringOrVec::deserialize(deserializer)? {
+        StringOrVec::String(s) => Ok(vec![s]),
+        StringOrVec::Vec(v) => Ok(v),
+    }
 }
 
 #[cfg(test)]
