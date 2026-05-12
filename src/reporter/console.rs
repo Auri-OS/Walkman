@@ -1,6 +1,6 @@
 use crate::config::TestConfig;
 use crate::traits::Reporter;
-use crate::{GREEN, RED, RESET};
+use crate::{GREEN, GREY, RED, RESET};
 
 pub struct ConsoleReporter;
 
@@ -22,8 +22,11 @@ impl Reporter for ConsoleReporter {
         print!("  [TEST] Executing: '{}' ... ", step_name);
     }
 
-    fn on_step_success(&self, _step_name: &str) {
+    fn on_step_success(&self, _step_name: &str, details: Option<String>) {
         println!("{}SUCCESS{}", GREEN, RESET);
+        if let Some(msg) = details {
+            println!("{GREY}{msg}{RESET}");
+        }
     }
 
     fn on_step_failure(&self, _step_name: &str, reason: &str) {

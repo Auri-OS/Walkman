@@ -4,12 +4,17 @@ use similar::{ChangeTag, TextDiff};
 
 use crate::config::TestConfig;
 use crate::traits::{Reporter, Runner};
-use crate::{RED, RESET};
+use crate::{Cli, GREEN, GREY, RED, RESET};
 
 pub struct QemuRunner;
 
 impl Runner for QemuRunner {
-    fn run(&mut self, config: &TestConfig, reporter: &dyn Reporter) -> anyhow::Result<()> {
+    fn run(
+        &mut self,
+        config: &TestConfig,
+        opts: &Cli,
+        reporter: &dyn Reporter,
+    ) -> anyhow::Result<()> {
         reporter.on_test_start(config);
 
         let mut p = spawn(&config.command, Some(config.timeout_ms))?;
@@ -36,26 +41,40 @@ impl Runner for QemuRunner {
                 anyhow::bail!(e.to_string());
             }
 
-            for expect in &test.expect {
-                if let Err(e) = p.exp_string(expect) {
-                    let fail_msg = match &e {
-                        rexpect::error::Error::Timeout {
-                            expected: exp, got, ..
-                        } => format_diff(exp, got),
-                        rexpect::error::Error::EOF {
-                            expected: exp, got, ..
-                        } => {
-                            format!(
-                                "EOF (OS Crashed)!\n    {RED}│{RESET} Expected: '{}'\n    {RED}│{RESET} Got:      '{}'",
-                                exp,
-                                clean_output(got)
-                            )
-                        }
-                        _ => e.to_string(),
-                    };
+            let mut verbose_logs = String::new();
 
-                    reporter.on_step_failure(&test.command, &fail_msg);
-                    anyhow::bail!(e.to_string());
+            for expect in &test.expect {
+                match p.exp_string(expect) {
+                    Ok(got) => {
+                        if opts.verbose {
+                            let clean = clean_output(&got);
+                            let reconstructed = format!("{clean}{GREEN}{expect}{GREY}");
+                            verbose_logs.push_str(&format!(
+                                "    │ Expected: '{}'\n    │ Got:      '{}'\n",
+                                expect, reconstructed
+                            ));
+                        }
+                    }
+                    Err(e) => {
+                        let fail_msg = match &e {
+                            rexpect::error::Error::Timeout {
+                                expected: exp, got, ..
+                            } => format_diff(exp, got),
+                            rexpect::error::Error::EOF {
+                                expected: exp, got, ..
+                            } => {
+                                format!(
+                                    "EOF (OS Crashed)!\n    {RED}│{RESET} Expected: '{}'\n    {RED}│{RESET} Got:      '{}'",
+                                    exp,
+                                    clean_output(got)
+                                )
+                            }
+                            _ => e.to_string(),
+                        };
+
+                        reporter.on_step_failure(&test.command, &fail_msg);
+                        anyhow::bail!(e.to_string());
+                    }
                 }
             }
 
@@ -67,7 +86,13 @@ impl Runner for QemuRunner {
                 anyhow::bail!(e.to_string());
             }
 
-            reporter.on_step_success(&test.command);
+            let details = if opts.verbose && !verbose_logs.is_empty() {
+                Some(verbose_logs.trim_end().to_string())
+            } else {
+                None
+            };
+
+            reporter.on_step_success(&test.command, details);
         }
 
         let _ = p.process_mut().kill(rexpect::process::Signal::SIGTERM);
@@ -78,7 +103,7 @@ impl Runner for QemuRunner {
 }
 
 fn clean_output(raw: &str) -> String {
-    let mut msg = raw.replace("\r\n", " ↵ ").replace('\n', " ↵ ");
+    let mut msg = raw.replace("\r\n", " ↵ ").replace(['\n', '\r'], " ↵ ");
 
     if let Ok(re) = Regex::new(r"\x1b\[[0-9;]*[mK]|\\u\{1b\}\[[0-9;]*[mK]") {
         msg = re.replace_all(&msg, "").to_string();

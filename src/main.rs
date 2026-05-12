@@ -4,6 +4,7 @@ use std::{
 };
 
 use walkman::{
+    Cli,
     config::TestConfig,
     engine::QemuRunner,
     reporter::{console::ConsoleReporter, tui::TuiReporter},
@@ -11,15 +12,6 @@ use walkman::{
 };
 
 use clap::Parser;
-
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Cli {
-    path: String,
-
-    #[arg(long, default_value_t = false)]
-    nui: bool,
-}
 
 fn main() {
     let cli = Cli::parse();
@@ -71,10 +63,10 @@ fn main() {
 
         let result = if cli.nui {
             let reporter = ConsoleReporter;
-            runner.run(&config, &reporter)
+            runner.run(&config, &cli, &reporter)
         } else {
             let reporter = TuiReporter::new(&config);
-            runner.run(&config, &reporter)
+            runner.run(&config, &cli, &reporter)
         };
 
         let success = result.is_ok();
