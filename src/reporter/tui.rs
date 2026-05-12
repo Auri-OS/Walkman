@@ -12,7 +12,7 @@ use crate::{RED, RESET, config::TestConfig, traits::Reporter};
 enum Status {
     Pending,
     Running,
-    Success,
+    Success(Option<String>),
     Failed(String),
 }
 
@@ -131,7 +131,7 @@ impl TuiReporter {
                     ResetColor
                 );
             }
-            Status::Success => {
+            Status::Success(details) => {
                 let _ = execute!(
                     out,
                     SetForegroundColor(Color::Green),
@@ -139,6 +139,16 @@ impl TuiReporter {
                     ResetColor,
                     Print(format!("{}{}\n", prefix, name))
                 );
+
+                if let Some(msg) = details {
+                    let _ = execute!(
+                        out,
+                        SetForegroundColor(Color::DarkGrey),
+                        Print(format!("{}\n", msg)),
+                        ResetColor
+                    );
+                    lines += msg.lines().count() as u16;
+                }
             }
             Status::Running => {
                 let _ = execute!(
@@ -213,15 +223,15 @@ impl Reporter for TuiReporter {
     }
 
     fn on_boot_check(&self, msg: &str) {
-        self.update_boot_status(msg, Status::Success);
+        self.update_boot_status(msg, Status::Success(None));
     }
 
     fn on_step_start(&self, step_name: &str) {
         self.update_shell_status(step_name, Status::Running);
     }
 
-    fn on_step_success(&self, step_name: &str) {
-        self.update_shell_status(step_name, Status::Success);
+    fn on_step_success(&self, step_name: &str, details: Option<String>) {
+        self.update_shell_status(step_name, Status::Success(details));
     }
 
     fn on_step_failure(&self, step_name: &str, reason: &str) {
@@ -293,7 +303,10 @@ mod tests {
         assert_eq!(reporter.state.borrow().boot_steps[0].1, Status::Running);
 
         reporter.on_boot_check("booting");
-        assert_eq!(reporter.state.borrow().boot_steps[0].1, Status::Success);
+        assert_eq!(
+            reporter.state.borrow().boot_steps[0].1,
+            Status::Success(None)
+        );
 
         reporter.on_step_failure("ls", "timeout");
         assert_eq!(
