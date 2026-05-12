@@ -38,7 +38,6 @@ impl Runner for QemuRunner {
 
             for expect in &test.expect {
                 if let Err(e) = p.exp_string(expect) {
-                    // let clean_msg = clean_error_msg(&e.to_string());
                     let fail_msg = match &e {
                         rexpect::error::Error::Timeout {
                             expected: exp, got, ..
