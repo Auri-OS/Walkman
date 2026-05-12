@@ -6,7 +6,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
-use crate::{config::TestConfig, traits::Reporter};
+use crate::{RED, RESET, config::TestConfig, traits::Reporter};
 
 #[derive(Debug, PartialEq)]
 enum Status {
@@ -167,8 +167,7 @@ impl TuiReporter {
                 );
                 let _ = execute!(
                     out,
-                    SetForegroundColor(Color::Red),
-                    Print(format!("    ↳  Reason: {}\n", reason)),
+                    Print(format!("  {RED}↳ │{RESET} Reason: {}\n", reason)),
                     ResetColor
                 );
                 lines += 1;
