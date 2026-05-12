@@ -705,6 +705,7 @@ dependencies = [
  "anyhow",
  "clap",
  "crossterm",
+ "regex",
  "rexpect",
  "serde",
  "serde_yaml",

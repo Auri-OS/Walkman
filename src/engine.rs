@@ -1,3 +1,4 @@
+use regex::Regex;
 use rexpect::spawn;
 
 use crate::config::TestConfig;
@@ -33,12 +34,13 @@ impl Runner for QemuRunner {
                 anyhow::bail!(e.to_string());
             }
 
-            if let Err(e) = p.exp_string(&test.expect) {
-                reporter.on_step_failure(
-                    &test.command,
-                    &format!("Expected '{}' not found", test.expect),
-                );
-                anyhow::bail!(e.to_string());
+            for expect in &test.expect {
+                if let Err(e) = p.exp_string(expect) {
+                    let clean_msg = clean_error_msg(&e.to_string());
+
+                    reporter.on_step_failure(&test.command, &clean_msg);
+                    anyhow::bail!(e.to_string());
+                }
             }
 
             if let Err(e) = p.exp_string(&config.shell_interactions.prompt) {
@@ -57,4 +59,17 @@ impl Runner for QemuRunner {
 
         Ok(())
     }
+}
+
+fn clean_error_msg(raw_error: &str) -> String {
+    let mut msg = raw_error
+        .replace("\\r\\n", " ↵ ")
+        .replace("\\n", " ↵ ")
+        .replace("\\\"", "\"");
+
+    if let Ok(re) = Regex::new(r"\\u\{1b\}\[[0-9;]*[mK]") {
+        msg = re.replace_all(&msg, "").to_string();
+    }
+
+    msg
 }
