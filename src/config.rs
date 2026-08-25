@@ -20,6 +20,8 @@ pub struct CommandTest {
     pub command: String,
     #[serde(deserialize_with = "deserialize_expect")]
     pub expect: Vec<String>,
+    #[serde(default)]
+    pub no_prompt: bool,
 }
 
 fn deserialize_expect<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
