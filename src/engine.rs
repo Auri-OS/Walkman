@@ -78,12 +78,14 @@ impl Runner for QemuRunner {
                 }
             }
 
-            if let Err(e) = p.exp_string(&config.shell_interactions.prompt) {
-                reporter.on_step_failure(
-                    &test.command,
-                    "Kernel panic / No prompt returned after command",
-                );
-                anyhow::bail!(e.to_string());
+            if !test.no_prompt {
+                if let Err(e) = p.exp_string(&config.shell_interactions.prompt) {
+                    reporter.on_step_failure(
+                        &test.command,
+                        "Kernel panic / No prompt returned after command",
+                    );
+                    anyhow::bail!(e.to_string());
+                }
             }
 
             let details = if opts.verbose && !verbose_logs.is_empty() {
